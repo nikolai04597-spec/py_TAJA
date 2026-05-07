@@ -3,6 +3,10 @@ from streamlit_ace import st_ace
 import random
 import time
 
+# ----------------------------
+# 페이지 설정
+# ----------------------------
+
 st.set_page_config(
     page_title="Python 타자 연습",
     page_icon="⌨️",
@@ -10,12 +14,12 @@ st.set_page_config(
 )
 
 # ----------------------------
-# 난이도별 문제
+# 문제 데이터
 # ----------------------------
 
 PROBLEMS = {
     "초급": [
-        'print("Hello World")',
+        '''print("Hello World")''',
 
         '''name = "Python"
 print(name)''',
@@ -29,7 +33,7 @@ print(x + y)''',
     ],
 
     "중급": [
-        '''numbers = [1, 2, 3, 4, 5]
+        '''numbers = [1, 2, 3]
 
 for n in numbers:
     print(n * 2)''',
@@ -74,7 +78,7 @@ print(counter)'''
 }
 
 # ----------------------------
-# 세션 상태 초기화
+# 세션 상태
 # ----------------------------
 
 if "difficulty" not in st.session_state:
@@ -82,7 +86,7 @@ if "difficulty" not in st.session_state:
 
 if "problem" not in st.session_state:
     st.session_state.problem = random.choice(
-        PROBLEMS[st.session_state.difficulty]
+        PROBLEMS["초급"]
     )
 
 if "start_time" not in st.session_state:
@@ -97,6 +101,12 @@ st.title("⌨️ Python 코드 타자 연습")
 st.write("Python 코드를 그대로 입력하세요.")
 
 # ----------------------------
+# 학생 이름 입력
+# ----------------------------
+
+student_name = st.text_input("학생 이름")
+
+# ----------------------------
 # 난이도 선택
 # ----------------------------
 
@@ -105,16 +115,18 @@ difficulty = st.selectbox(
     ["초급", "중급", "고급"]
 )
 
-# 난이도 바뀌면 새 문제
+# 난이도 변경 시 새 문제
 if difficulty != st.session_state.difficulty:
     st.session_state.difficulty = difficulty
-    st.session_state.problem = random.choice(PROBLEMS[difficulty])
+    st.session_state.problem = random.choice(
+        PROBLEMS[difficulty]
+    )
     st.session_state.start_time = None
 
 problem = st.session_state.problem
 
 # ----------------------------
-# 문제 표시
+# 문제 / 입력창
 # ----------------------------
 
 col1, col2 = st.columns(2)
@@ -122,10 +134,6 @@ col1, col2 = st.columns(2)
 with col1:
     st.subheader("문제 코드")
     st.code(problem, language="python")
-
-# ----------------------------
-# 코드 입력창
-# ----------------------------
 
 with col2:
     st.subheader("코드 입력")
@@ -144,17 +152,25 @@ with col2:
     )
 
 # ----------------------------
-# 시간 측정 시작
+# 시작 시간 기록
 # ----------------------------
 
 if user_input and st.session_state.start_time is None:
     st.session_state.start_time = time.time()
 
 # ----------------------------
-# 결과 검사
+# 결과 확인 버튼
 # ----------------------------
 
-if user_input:
+if st.button("결과 확인"):
+
+    if not student_name:
+        st.warning("학생 이름을 입력하세요.")
+        st.stop()
+
+    if not user_input:
+        st.warning("코드를 입력하세요.")
+        st.stop()
 
     target = problem.strip()
     typed = user_input.strip()
@@ -164,27 +180,42 @@ if user_input:
         1 for a, b in zip(target, typed) if a == b
     )
 
-    accuracy = correct_chars / max(len(target), 1) * 100
+    accuracy = (
+        correct_chars / max(len(target), 1)
+    ) * 100
 
-    st.progress(min(int(accuracy), 100))
+    # 시간 계산
+    elapsed = time.time() - st.session_state.start_time
 
-    st.write(f"정확도: {accuracy:.2f}%")
+    # 타수 계산
+    cpm = len(typed) / elapsed * 60
 
-    # 완벽히 일치하면 성공
+    st.divider()
+
+    st.subheader("📊 결과")
+
+    st.write(f"👨‍🎓 학생 이름: {student_name}")
+    st.write(f"📚 난이도: {difficulty}")
+    st.write(f"⏱ 걸린 시간: {elapsed:.2f}초")
+    st.write(f"⚡ 타자 속도: {cpm:.2f} CPM")
+    st.write(f"🎯 정확도: {accuracy:.2f}%")
+
+    # 성공 여부
     if typed == target:
+        st.success("완벽하게 입력했습니다! 🎉")
+    else:
+        st.error("오타가 있습니다.")
 
-        elapsed = time.time() - st.session_state.start_time
+# ----------------------------
+# 다음 문제 버튼
+# ----------------------------
 
-        cpm = len(target) / elapsed * 60
+if st.button("다음 문제"):
 
-        st.success("완벽합니다! 🎉")
+    st.session_state.problem = random.choice(
+        PROBLEMS[difficulty]
+    )
 
-        st.write(f"⏱ 시간: {elapsed:.2f}초")
-        st.write(f"⚡ 타자 속도: {cpm:.2f} CPM")
+    st.session_state.start_time = None
 
-        if st.button("다음 문제"):
-            st.session_state.problem = random.choice(
-                PROBLEMS[difficulty]
-            )
-            st.session_state.start_time = None
-            st.rerun()
+    st.rerun()
